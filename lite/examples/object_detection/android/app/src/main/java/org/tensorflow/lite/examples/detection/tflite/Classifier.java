@@ -17,6 +17,9 @@ package org.tensorflow.lite.examples.detection.tflite;
 
 import android.graphics.Bitmap;
 import android.graphics.RectF;
+
+import org.tensorflow.lite.examples.detection.customModels.ReMappedItems;
+
 import java.util.List;
 
 /** Generic interface for interacting with different recognition engines. */
@@ -55,7 +58,11 @@ public interface Classifier {
     public Recognition(
         final String id, final String title, final Float confidence, final RectF location) {
       this.id = id;
-      this.title = title;
+
+      //inject here
+      //this.title = title;
+      this.title = ReMappedItems.getRename(title);
+
       this.confidence = confidence;
       this.location = location;
     }

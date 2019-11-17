@@ -19,7 +19,9 @@ package org.tensorflow.lite.examples.detection;
 import android.Manifest;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -29,6 +31,7 @@ import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -39,6 +42,9 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
+
+import android.text.util.Linkify;
+import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.View;
@@ -50,6 +56,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Random;
+
+import org.tensorflow.lite.examples.detection.customModels.recipeFetcher.Recipe;
+import org.tensorflow.lite.examples.detection.customModels.viewHandle.NutritionalFactView;
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
 
@@ -167,7 +178,158 @@ public abstract class CameraActivity extends AppCompatActivity
 
     plusImageView.setOnClickListener(this);
     minusImageView.setOnClickListener(this);
+
+    //add this the global
+    NutritionalFactView.addHandle(this);
   }
+
+  public void drawRecipes(List<Recipe> recipeList){
+      Recipe r = getRandom(recipeList);
+      setValueForNu(r.getLink(), r.getTitle(), r.getCalories(), r.getFatContent(), r.getCholesterolContent(),
+              r.getSodiumContent(), r.getCarbohydrateContent(), r.getProteinContent());
+  }
+
+  private Recipe getRandom(List<Recipe> recipes){
+    return recipes.get((int)Math.random() * recipes.size());
+  }
+
+
+  protected void setValueForNu(String link, String RecipeName, String Calories, String Fats, String Cholesterol, String Sodium, String Carbohydrate, String Protein){
+
+    TextView r = (TextView) findViewById(R.id.RecipeName);
+    r.setText(RecipeName);
+    r.setOnClickListener(new View.OnClickListener() {
+      public void onClick(View v) {
+        //Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("www.google.com"));
+        Intent intent = new Intent(Intent.ACTION_VIEW).setData(Uri.parse(link));
+        startActivity(intent);
+      }
+    });
+
+    TextView a = (TextView) findViewById(R.id.Calories);
+    a.setText(Calories);
+
+    TextView b = (TextView) findViewById(R.id.Fats);
+    b.setText(Fats);
+
+    TextView c = (TextView) findViewById(R.id.Cholesterol);
+    c.setText(Cholesterol);
+
+    TextView d = (TextView) findViewById(R.id.Sodium);
+    d.setText(Sodium);
+
+    TextView e = (TextView) findViewById(R.id.Carbohydrate);
+    e.setText(Carbohydrate);
+
+    TextView f = (TextView) findViewById(R.id.Protein);
+    f.setText(Protein);
+
+  }
+
+
+
+  /*
+
+  public void setValueForNu(String link, String RecipeName, String Calories, String Fats, String Cholesterol, String Sodium, String Carbohydrate, String Protein) {
+
+    LinearLayout layout = (LinearLayout) findViewById(R.id.recipeCards); // Root ViewGroup in which you want to add textview{
+
+    TextView rN = new TextView(this);
+    rN.setText(RecipeName);
+    rN.setOnClickListener(new View.OnClickListener() {
+      public void onClick(View v) {
+        //Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("www.google.com"));
+        Intent intent = new Intent(Intent.ACTION_VIEW).setData(Uri.parse(link));
+        startActivity(intent);
+      }
+    });
+    rN.setTextSize(20);
+    rN.setTypeface(null, Typeface.BOLD);
+    layout.addView(rN);
+
+    TextView nF = new TextView(this);
+    nF.setText("Nutrition Facts");
+    nF.setTextSize(18);
+    layout.addView(nF);
+
+    LinearLayout sub = new LinearLayout(this);
+    sub.setOrientation(LinearLayout.HORIZONTAL);
+    TextView calName = new TextView(this);
+    calName.setText("Calories: ");
+    calName.setTextSize(14);
+    sub.addView(calName);
+    TextView calValue = new TextView(this);
+    calValue.setText(Calories);
+    calValue.setTextSize(14);
+    sub.addView(calValue);
+    layout.addView(sub);
+
+    sub = new LinearLayout(this);
+    sub.setOrientation(LinearLayout.HORIZONTAL);
+    TextView fatName = new TextView(this);
+    fatName.setText("Total Fats: ");
+    fatName.setTextSize(14);
+    sub.addView(fatName);
+    TextView fatValue = new TextView(this);
+    fatValue.setText(Fats);
+    fatValue.setTextSize(14);
+    sub.addView(fatValue);
+    layout.addView(sub);
+
+    sub = new LinearLayout(this);
+    sub.setOrientation(LinearLayout.HORIZONTAL);
+    TextView cName = new TextView(this);
+    cName.setText("Cholesterol: ");
+    cName.setTextSize(14);
+    sub.addView(cName);
+    TextView cValue = new TextView(this);
+    cValue.setText(Cholesterol);
+    cValue.setTextSize(14);
+    sub.addView(cValue);
+    layout.addView(sub);
+
+    sub = new LinearLayout(this);
+    sub.setOrientation(LinearLayout.HORIZONTAL);
+    TextView sName = new TextView(this);
+    sName.setText("Sodium: ");
+    sName.setTextSize(14);
+    sub.addView(sName);
+    TextView sValue = new TextView(this);
+    sValue.setText(Sodium);
+    sValue.setTextSize(14);
+    sub.addView(sValue);
+    layout.addView(sub);
+
+    sub = new LinearLayout(this);
+    sub.setOrientation(LinearLayout.HORIZONTAL);
+    TextView carboName = new TextView(this);
+    carboName.setText("Total Carbohydrate: ");
+    carboName.setTextSize(14);
+    sub.addView(carboName);
+    TextView carboValue = new TextView(this);
+    carboValue.setText(Carbohydrate);
+    carboValue.setTextSize(14);
+    sub.addView(carboValue);
+    layout.addView(sub);
+
+    sub = new LinearLayout(this);
+    sub.setOrientation(LinearLayout.HORIZONTAL);
+    TextView pName = new TextView(this);
+    pName.setText("Protein: ");
+    pName.setTextSize(14);
+    sub.addView(pName);
+    TextView pValue = new TextView(this);
+    pValue.setText(Protein);
+    pValue.setTextSize(14);
+    sub.addView(pValue);
+    layout.addView(sub);
+
+    sub = new LinearLayout(this);
+    sub.setPadding(0,50,0,50);
+    layout.addView(sub);
+  }
+*/
+
 
   protected int[] getRgbBytes() {
     imageConverter.run();

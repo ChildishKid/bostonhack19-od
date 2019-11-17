@@ -27,12 +27,22 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.widget.Toast;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.tensorflow.lite.examples.detection.customModels.FoodList;
+import org.tensorflow.lite.examples.detection.customModels.HandleRecipeTask;
+import org.tensorflow.lite.examples.detection.customModels.ReMappedItems;
+import org.tensorflow.lite.examples.detection.customModels.recipeFetcher.Recipe;
+import org.tensorflow.lite.examples.detection.customModels.recipeFetcher.RecipeService;
+import org.tensorflow.lite.examples.detection.customModels.viewHandle.NutritionalFactView;
 import org.tensorflow.lite.examples.detection.customview.OverlayView;
 import org.tensorflow.lite.examples.detection.customview.OverlayView.DrawCallback;
 import org.tensorflow.lite.examples.detection.env.BorderedText;
@@ -56,7 +66,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String TF_OD_API_LABELS_FILE = "file:///android_asset/labelmap.txt";
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
-  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
+  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.58f;
   private static final boolean MAINTAIN_ASPECT = false;
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
@@ -71,6 +81,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private Bitmap croppedBitmap = null;
   private Bitmap cropCopyBitmap = null;
 
+  private RecipeService service = new RecipeService();
+
+
   private boolean computingDetection = false;
 
   private long timestamp = 0;
@@ -81,6 +94,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private MultiBoxTracker tracker;
 
   private BorderedText borderedText;
+
+  private HashMap<String, String> remap = new HashMap<>();
+
+  private boolean processing = false;
+
+
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -103,6 +122,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               TF_OD_API_INPUT_SIZE,
               TF_OD_API_IS_QUANTIZED);
       cropSize = TF_OD_API_INPUT_SIZE;
+
     } catch (final IOException e) {
       e.printStackTrace();
       LOGGER.e(e, "Exception initializing classifier!");
@@ -149,6 +169,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   @Override
   protected void processImage() {
+
     ++timestamp;
     final long currTimestamp = timestamp;
     trackingOverlay.postInvalidate();
@@ -179,6 +200,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             LOGGER.i("Running detection on image " + currTimestamp);
             final long startTime = SystemClock.uptimeMillis();
             final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
+
             lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
 
             cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
@@ -198,15 +220,22 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             final List<Classifier.Recognition> mappedRecognitions =
                 new LinkedList<Classifier.Recognition>();
 
+
+            FoodList list = new FoodList();
             for (final Classifier.Recognition result : results) {
+
               final RectF location = result.getLocation();
-              if (location != null && result.getConfidence() >= minimumConfidence) {
-                canvas.drawRect(location, paint);
+              if (location != null && result.getConfidence() >= minimumConfidence && ReMappedItems.isVegetable(result.getTitle())) {
 
-                cropToFrameTransform.mapRect(location);
 
-                result.setLocation(location);
-                mappedRecognitions.add(result);
+                  canvas.drawRect(location, paint);
+
+                  cropToFrameTransform.mapRect(location);
+
+                  result.setLocation(location);
+                  mappedRecognitions.add(result);
+                  //add item to list
+                  list.append(result.getTitle());
               }
             }
 
@@ -224,9 +253,78 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     showInference(lastProcessingTimeMs + "ms");
                   }
                 });
+
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    //do out here async
+                    //if procesing
+                    startAsync(list);
+                }
+            });
+
           }
         });
+
+
+
   }
+
+
+  private void startAsync(FoodList list){
+    if(!NutritionalFactView.isProcessing() && NutritionalFactView.handleExists()) {
+      HandleRecipeTask task = new HandleRecipeTask();
+
+      List<FoodList> lists = new ArrayList<>();
+      lists.add(list);
+      task.execute(list);
+    }
+  }
+
+  /*
+  private void handlePredictions(FoodList foodList){
+    if(!NutritionalFactView.isProcessing() && NutritionalFactView.handleExists()) {
+      //findRecipesInBackground(list);
+      FoodList f = new FoodList();
+      f.append("Shrimp");
+      f.append("Garlic");
+      findRecipesInBackground(f);
+    }
+  }
+*/
+  /*
+  private void findRecipesInBackground(FoodList list){
+
+    runInBackground(
+    new Runnable() {
+      public void run() {
+        if (list.getSize() > 1) {
+          try {
+            NutritionalFactView.processing = true;
+            List<Recipe> recipes = service.getRecipesUsingIngredients(list.getSet());
+            Log.e("MSG", "Recipes obtained");
+            Log.e("CONTENT", recipes.toString());
+
+
+            //callback to the ui thread
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                  NutritionalFactView.drawView(recipes);
+                  NutritionalFactView.processing = false;
+                }
+              }
+            );
+
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    }
+    );
+  }
+*/
 
   @Override
   protected int getLayoutId() {

@@ -45,4 +45,8 @@ dependencies {
     implementation 'androidx.coordinatorlayout:coordinatorlayout:1.0.0'
     implementation 'com.google.android.material:material:1.0.0'
     implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
+    implementation 'com.google.code.gson:gson:2.8.2'
+    implementation 'commons-io:commons-io:2.6'
+
+
 }
